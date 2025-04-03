@@ -16,6 +16,47 @@ A Python library for automating ServiceNow browser interactions using Selenium a
 pip install servicenow-browser-use
 ```
 
+## Components
+
+### Agent Module (`agent/`)
+The agent module provides AI-powered automation capabilities:
+- `service.py`: Core agent service implementing AI-driven browser automation
+- `prompts.py`: System prompts and templates for AI interactions
+- `views.py`: Data models for agent actions and responses
+- `message_manager/`: Handles communication between agent and browser
+
+### Browser Module (`browser/`)
+Handles browser automation and recording:
+- `browser.py`: Main browser controller with Selenium integration
+- `context.py`: Browser context management and state tracking
+- `selenium_recorder.py`: Records browser actions for replay
+- `streamlined_recorder.py`: Optimized recording functionality
+- `shadow_dom.py`: Handles shadow DOM elements in ServiceNow
+- `recording_manager.py`: Manages browser action recordings
+
+### Controller Module (`controller/`)
+Coordinates between different components:
+- `service.py`: Main controller service orchestrating automation
+- `registry/`: Component registration and management
+- `views.py`: Controller data models and interfaces
+
+### DOM Module (`dom/`)
+Handles DOM manipulation and analysis:
+- `service.py`: DOM manipulation service
+- `history_tree_processor/`: Processes DOM history
+- `buildDomTree.js`: JavaScript for DOM tree construction
+- `views.py`: DOM-related data models
+
+### Utils Module (`utils/`)
+Common utility functions and helpers:
+- Various helper functions for the entire library
+- Shared functionality across modules
+
+### Selenium Generator
+Converts agent recordings to Selenium scripts:
+- `selenium_generator.py`: Generates Java Selenium scripts from recordings
+- Supports common actions: clicks, inputs, scrolling, keyboard events
+
 ## Quick Start
 
 ```python
@@ -51,9 +92,32 @@ SERVICENOW_URL=your_instance_url
 ANONYMIZED_TELEMETRY=false
 ```
 
-## Documentation
+## Advanced Usage
 
-For detailed documentation, please visit [documentation link].
+### Recording Browser Actions
+```python
+from servicenow_browser_use import SeleniumRecorder
+
+recorder = SeleniumRecorder(browser)
+recorder.start_recording()
+# Perform actions
+recording = recorder.stop_recording()
+```
+
+### Converting Recordings to Selenium
+```python
+from servicenow_browser_use import convert_agent_recording_to_selenium
+
+selenium_script = convert_agent_recording_to_selenium("recording.json")
+```
+
+### DOM Manipulation
+```python
+from servicenow_browser_use import DomService
+
+dom = DomService(browser)
+element = dom.find_element("css_selector", "#incident_number")
+```
 
 ## Contributing
 
