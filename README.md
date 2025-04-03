@@ -2,6 +2,28 @@
 
 A Python library for automating ServiceNow browser interactions using Selenium and AI-powered agents.
 
+## Table of Contents
+- [Features](#features)
+- [Installation](#installation)
+- [Citation](#citation)
+- [Components](#components)
+  - [Agent Module](#agent-module-agent)
+  - [Browser Module](#browser-module-browser)
+  - [Controller Module](#controller-module-controller)
+  - [DOM Module](#dom-module-dom)
+  - [Utils Module](#utils-module-utils)
+  - [Selenium Generator](#selenium-generator)
+- [Quick Start](#quick-start)
+- [Example Usage](#example-usage)
+- [Configuration](#configuration)
+- [Advanced Usage](#advanced-usage)
+  - [Recording Browser Actions](#recording-browser-actions)
+  - [Converting Recordings to Selenium](#converting-recordings-to-selenium)
+  - [DOM Manipulation](#dom-manipulation)
+- [Contributing](#contributing)
+- [License](#license)
+- [Codebase Structure](#codebase-structure)
+
 ## Features
 
 - 🤖 AI-powered browser automation
@@ -14,6 +36,20 @@ A Python library for automating ServiceNow browser interactions using Selenium a
 
 ```bash
 pip install servicenow-browser-use
+```
+
+## Citation
+
+If you use this library in your research, please cite:
+
+```bibtex
+@software{browser_use2024,
+  author = {Müller, Magnus and Žunič, Gregor},
+  title = {Browser Use: Enable AI to control your browser},
+  year = {2024},
+  publisher = {GitHub},
+  url = {https://github.com/browser-use/browser-use}
+}
 ```
 
 ## Components
@@ -80,6 +116,122 @@ browser.get("https://your-instance.service-now.com")
 # Let the agent perform actions
 agent.execute_task("Navigate to incident list and create a new incident")
 ```
+
+## Example Usage
+
+Here's a complete example of how to use the library with advanced features:
+
+```python
+import sys
+import asyncio
+from langchain_openai import AzureChatOpenAI
+from servicenow_browser_use import Agent
+from dotenv import load_dotenv
+from pydantic import SecretStr
+from servicenow_browser_use import BrowserConfig
+from servicenow_browser_use.browser.browser import Browser
+from servicenow_browser_use.browser.context import BrowserContextConfig
+from servicenow_browser_use.browser.streamlined_recorder import StreamlinedRecorder
+import os
+import logging
+import subprocess
+from datetime import datetime
+import time
+import requests
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+async def main(task, llm_model):
+    # Create output directory if it doesn't exist
+    os.makedirs("output", exist_ok=True)
+    os.makedirs("logs/conversation", exist_ok=True)
+    
+    # Clean up any existing Chrome instances
+    subprocess.run(["pkill", "Chrome"], capture_output=True)
+    await asyncio.sleep(2)
+    
+    # Configure browser with advanced settings
+    config = BrowserConfig(
+        chrome_instance_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        disable_security=True,
+        extra_chromium_args=[
+            '--remote-debugging-port=9222',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            '--enable-logging',
+            '--v=1',
+            '--no-sandbox',
+            '--disable-dev-shm-usage'
+        ],
+        new_context_config=BrowserContextConfig(
+            save_recording_path='output',
+            browser_window_size={'width': 1280, 'height': 720},
+            wait_for_network_idle_page_load_time=2.0,
+            minimum_wait_page_load_time=1.0
+        )
+    )
+
+    # Initialize browser
+    browser = Browser(config=config)
+    
+    try:
+        # Initialize the browser and get the Playwright browser instance
+        playwright_browser = await browser.get_playwright_browser()
+        if not playwright_browser:
+            raise Exception("Failed to initialize browser")
+        
+        # Wait for browser to initialize
+        await asyncio.sleep(3)
+        
+        # Initialize LLM
+        llm = AzureChatOpenAI(
+            model=llm_model,
+            api_version="2024-10-21",
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
+            api_key=SecretStr(os.getenv("AZURE_OPENAI_KEY", "")),
+        )
+        
+        # Initialize agent with browser
+        agent = Agent(
+            task=task,
+            llm=llm,
+            browser=browser,
+            save_conversation_path="logs/conversation",
+        )
+
+        # Run the agent and get results
+        result = await agent.run()
+        
+        if result:
+            print("Task completed successfully!")
+            print("Final state:", result)
+        else:
+            print("Task failed or returned no results")
+            
+    except Exception as e:
+        logger.error(f"Error during agent execution: {str(e)}")
+        raise
+    finally:
+        # Clean up
+        try:
+            if browser:
+                await browser.close()
+        except Exception as e:
+            logger.error(f"Error closing browser: {str(e)}")
+        
+        try:
+            subprocess.run(["pkill", "Chrome"], capture_output=True)
+        except Exception as e:
+            logger.error(f"Error during Chrome cleanup: {str(e)}")
+
+if __name__ == "__main__":
+    load_dotenv()
+    
+    task = "login with username: admin, password: admin, click on 'New' button and check if 'Flow' tab is present"
+    llm_model = "gpt-4"
+    asyncio.run(main(task, llm_model))
 
 ## Configuration
 
