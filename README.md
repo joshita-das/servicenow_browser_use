@@ -4,6 +4,8 @@ A Python library for automating ServiceNow browser interactions using AI-powered
 
 ## Table of Contents
 - [Installation](#installation)
+  - [From PyPI](#from-pypi)
+  - [From Source](#from-source)
 - [Inspiration](#inspiration)
 - [Quick Start](#quick-start)
 - [Example Explanation](#example-explanation)
@@ -16,8 +18,44 @@ A Python library for automating ServiceNow browser interactions using AI-powered
 
 ## Installation
 
+### From PyPI
+
 ```bash
 pip install servicenow-browser-use
+```
+
+### From Source
+
+1. Clone the repository:
+```bash
+git clone https://github.com/your-username/servicenow_browser_use.git
+cd servicenow_browser_use
+```
+
+2. Create and activate a virtual environment:
+```bash
+# For macOS/Linux
+python -m venv venv
+source venv/bin/activate
+
+# For Windows
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Set up environment variables:
+Create a `.env` file in the project root with the following content:
+
+```
+AZURE_OPENAI_ENDPOINT=your_endpoint
+AZURE_OPENAI_KEY=your_key
+SERVICENOW_URL=your_instance_url
+ANONYMIZED_TELEMETRY=false
 ```
 
 ## Inspiration

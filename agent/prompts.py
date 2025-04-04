@@ -13,7 +13,7 @@ from servicenow_browser_use.browser.views import BrowserState
 load_dotenv()
 
 # Get ServiceNow URL from environment variables
-SERVICENOW_URL = os.getenv('SERVICENOW_URL', 'https://k8s0722360-node1.thunder.devsnc.com/now/workflow-studio/home/process')
+SERVICENOW_URL = os.getenv('SERVICENOW_URL', "http://localhost:8080/now/workflow-studio/home/process")
 
 class SystemPrompt:
 	def __init__(self, action_description: str, current_date: datetime, max_actions_per_step: int = 10):
