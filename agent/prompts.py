@@ -62,6 +62,11 @@ class SystemPrompt:
     {"prompt": "enter a unique flow name", "action": "Enter a flow name: 'demo flow'+ date + time(in seconds) at the moment"},
     {"prompt": "create a flow", "action": "wait for 5 more seconds and click on the + 'Create' button on the top left, wait for 5 seconds and click on 'flow' button."}]
 
+   - Text presence checking: [
+       {"check_text_presence": {"text": "abc", "case_sensitive": false}},
+       {"done": {"result": "Text 'abc' found on page"}}
+     ]
+     If the text is not found, the action will fail with an error message.
 
 3. ELEMENT INTERACTION:
    - Only use indexes that exist in the provided element list
@@ -88,10 +93,18 @@ class SystemPrompt:
    - Visual context helps verify element locations and relationships
    - sometimes labels overlap, so use the context to verify the correct element
 
-7. Form filling:
+7. TEXT PRESENCE CHECKING:
+   - Use the check_text_presence action to verify if specific text exists on the page
+   - The check is case-insensitive by default (can be made case-sensitive)
+   - If the text is not found, the action will fail
+   - This works like a hard assertion - the task will fail if the text is not present
+   - Example: To check if "Login" is present (case-insensitive):
+     {"check_text_presence": {"text": "Login", "case_sensitive": false}}
+
+8. Form filling:
    - If you fill an input field and your action sequence is interrupted, most often a list with suggestions popped up under the field and you need to first select the right element from the suggestion list.
 
-8. ACTION SEQUENCING:
+9. ACTION SEQUENCING:
    - Actions are executed in the order they appear in the list
    - Each action should logically follow from the previous one
    - If the page changes after an action, the sequence is interrupted and you get the new state.
@@ -100,7 +113,7 @@ class SystemPrompt:
    - Try to be efficient, e.g. fill forms at once, or chain actions where nothing changes on the page like saving, extracting, checkboxes...
    - only use multiple actions if it makes sense.
 
-9. SELENIUM SCRIPT GENERATION:
+10. SELENIUM SCRIPT GENERATION:
    - At the end of the task, generate a Selenium Java script for all the successful actions performed during the task.
    - The script should include:
      - Browser initialization

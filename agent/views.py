@@ -25,13 +25,25 @@ class AgentStepInfo:
 	max_steps: int
 
 
+@dataclass
+class ScrollAction:
+	amount: Optional[int] = None
+
+
+@dataclass
+class CheckTextPresenceAction:
+	text: str
+	case_sensitive: bool = False
+
+
 class ActionResult(BaseModel):
 	"""Result of executing an action"""
 
-	is_done: Optional[bool] = False
+	is_done: bool = False
 	extracted_content: Optional[str] = None
 	error: Optional[str] = None
 	include_in_memory: bool = False  # whether to include in past messages as context or not
+	task_failed: bool = False
 
 
 class AgentBrain(BaseModel):
@@ -181,8 +193,9 @@ class AgentHistoryList(BaseModel):
 			self.history
 			and len(self.history[-1].result) > 0
 			and self.history[-1].result[-1].is_done
+			and not self.history[-1].result[-1].task_failed
 		):
-			return self.history[-1].result[-1].is_done
+			return True
 		return False
 
 	def has_errors(self) -> bool:

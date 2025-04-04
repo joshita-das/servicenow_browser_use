@@ -489,3 +489,74 @@ class Controller:
 			return ActionResult()
 		except Exception as e:
 			raise e
+
+	async def verify_page_load(self, expected_elements: list[str] = None, max_retries: int = 3) -> ActionResult:
+		"""Verify that the page is properly loaded by checking for expected elements.
+		
+		Args:
+			expected_elements: List of CSS selectors for elements that should be present
+			max_retries: Maximum number of retries if elements are not found
+		"""
+		try:
+			retry_count = 0
+			while retry_count < max_retries:
+				try:
+					# Wait for basic page load states
+					await self._wait_for_page_load()
+					
+					# If specific elements are expected, verify their presence
+					if expected_elements:
+						for selector in expected_elements:
+							await self.wait_for_element(By.CSS_SELECTOR, selector, timeout=10)
+					
+					return ActionResult(
+						is_done=True,
+						extracted_content="Page loaded successfully",
+						error=None,
+						include_in_memory=True,
+						task_failed=False
+					)
+				except Exception as e:
+					retry_count += 1
+					if retry_count < max_retries:
+						logger.warning(f"Page load verification attempt {retry_count} failed: {str(e)}")
+						# Try reloading the page
+						await self.driver.reload()
+						await asyncio.sleep(2)  # Wait a bit before retrying
+					else:
+						return ActionResult(
+							is_done=False,
+							extracted_content=None,
+							error=f"Failed to verify page load after {max_retries} attempts: {str(e)}",
+							include_in_memory=True,
+							task_failed=True
+						)
+		except Exception as e:
+			return ActionResult(
+				is_done=False,
+				extracted_content=None,
+				error=f"Page load verification failed: {str(e)}",
+				include_in_memory=True,
+				task_failed=True
+			)
+
+	async def _wait_for_page_load(self):
+		"""Wait for page to be fully loaded and stable."""
+		try:
+			# Wait for DOM content loaded
+			await self.driver.wait_for_load_state("domcontentloaded")
+			
+			# Wait for network idle
+			await self.driver.wait_for_load_state("networkidle", timeout=5000)
+			
+			# Wait for page to be ready
+			await self.driver.wait_for_function(
+				"() => document.readyState === 'complete'",
+				timeout=5000
+			)
+			
+			# Additional wait for dynamic content
+			await asyncio.sleep(2)
+			
+		except Exception as e:
+			logger.warning(f"Page load wait warning: {str(e)}")

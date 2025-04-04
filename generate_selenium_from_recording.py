@@ -45,30 +45,49 @@ def process_action(action_data):
         element_id = element.get("id")
         element_xpath = element.get("xpath")
         text = action_data.get("text", "")
+        has_shadow_dom = element.get("hasShadowDOM", False)
         
-        # Choose the best locator strategy
-        if element_id:
-            locator = f'By.id("{element_id}")'
-        elif element_xpath:
-            locator = f'By.xpath("{element_xpath}")'
+        if has_shadow_dom:
+            # Handle shadow DOM elements
+            shadow_elements = element.get("elementsWithShadowDOM", [])
+            shadow_parts = []
+            for e in shadow_elements:
+                tag_name = e.get("tagName", "").lower()
+                element_id = e.get("id", "")
+                if element_id:
+                    shadow_parts.append(f"{tag_name}#{element_id}")
+                else:
+                    shadow_parts.append(tag_name)
+            shadow_path = " >>> ".join(shadow_parts)
+            action_lines.extend([
+                f"            // Input text into shadow DOM element",
+                f'            WebElement inputElement = findElementWithShadowDOM("{shadow_path}");',
+                "            inputElement.clear();",
+                f'            inputElement.sendKeys("{text}");'
+            ])
         else:
-            return []  # Skip if no good locator found
-        
-        action_lines.extend([
-            f"            // Input text into element",
-            f"            WebElement inputElement = waitForElement({locator});",
-            "            inputElement.clear();",
-            f'            inputElement.sendKeys("{text}");'
-        ])
-    
+            # Choose the best locator strategy for non-shadow DOM elements
+            if element_id:
+                locator = f'By.id("{element_id}")'
+            elif element_xpath:
+                locator = f'By.xpath("{element_xpath}")'
+            else:
+                return []  # Skip if no good locator found
+            
+            action_lines.extend([
+                f"            // Input text into element",
+                f"            WebElement inputElement = waitForElement({locator});",
+                "            inputElement.clear();",
+                f'            inputElement.sendKeys("{text}");'
+            ])
     elif action_type == "click":
         # Get element details
         element_id = element.get("id")
         element_xpath = element.get("xpath")
-        element_text = element.get("text")
         has_shadow_dom = element.get("hasShadowDOM", False)
         
         if has_shadow_dom:
+            # Handle shadow DOM elements
             shadow_elements = element.get("elementsWithShadowDOM", [])
             shadow_parts = []
             for e in shadow_elements:
@@ -81,29 +100,31 @@ def process_action(action_data):
             shadow_path = " >>> ".join(shadow_parts)
             action_lines.extend([
                 f"            // Click shadow DOM element",
-                f'            WebElement clickElement = findElementWithShadowDOM("{shadow_path}");'
+                f'            WebElement clickElement = findElementWithShadowDOM("{shadow_path}");',
+                "            clickElement.click();"
             ])
         else:
-            # Choose the best locator strategy
+            # Choose the best locator strategy for non-shadow DOM elements
             if element_id:
                 locator = f'By.id("{element_id}")'
             elif element_xpath:
                 locator = f'By.xpath("{element_xpath}")'
-            elif element_text:
-                locator = f'By.xpath("//*[contains(text(), \'{element_text}\')]")'
             else:
                 return []  # Skip if no good locator found
             
             action_lines.extend([
                 f"            // Click element",
-                f"            WebElement clickElement = waitForElementClickable({locator});"
+                f"            WebElement clickElement = waitForElementClickable({locator});",
+                "            clickElement.click();"
             ])
-        
+    elif action_type == "go_to_url":
+        url = action_data.get("url", "")
         action_lines.extend([
-            "            clickElement.click();",
+            f"            // Navigate to URL",
+            f'            driver.get("{url}");',
             "            waitForPageLoad();"
         ])
-
+    
     return action_lines
 
 def create_selenium_code(recording):

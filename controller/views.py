@@ -1,4 +1,5 @@
 from typing import Optional
+from dataclasses import dataclass
 
 from pydantic import BaseModel, model_validator
 
@@ -62,3 +63,8 @@ class NoParamsAction(BaseModel):
 		# If you want to silently allow unknown fields at top-level,
 		# set extra = 'allow' as well:
 		extra = 'allow'
+
+
+class CheckTextPresenceAction(BaseModel):
+	text: str
+	case_sensitive: bool = False
