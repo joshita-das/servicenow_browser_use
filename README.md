@@ -1,6 +1,6 @@
 # ServiceNow Browser Use
 
-A Python library for automating ServiceNow browser interactions using Selenium and AI-powered agents.
+A Python library for automating ServiceNow browser interactions using AI-powered agents and Selenium.
 
 ## Table of Contents
 - [Features](#features)
@@ -38,9 +38,9 @@ A Python library for automating ServiceNow browser interactions using Selenium a
 pip install servicenow-browser-use
 ```
 
-## Citation
+## Inspiration
 
-If you use this library in your research, please cite:
+This project is inspired by the work of Müller and Žunič in their Browser Use project. If you use this library in your research, please cite:
 
 ```bibtex
 @software{browser_use2024,
@@ -95,31 +95,7 @@ Converts agent recordings to Selenium scripts:
 
 ## Quick Start
 
-```python
-from servicenow_browser_use import Browser, BrowserConfig, Agent
-
-# Configure the browser
-config = BrowserConfig(
-    headless=False,  # Set to True for headless mode
-    implicit_wait=10
-)
-
-# Initialize the browser
-browser = Browser(config)
-
-# Create an agent
-agent = Agent(browser)
-
-# Navigate to ServiceNow
-browser.get("https://your-instance.service-now.com")
-
-# Let the agent perform actions
-agent.execute_task("Navigate to incident list and create a new incident")
-```
-
-## Example Usage
-
-Here's a complete example of how to use the library with advanced features:
+Here's a complete example of how to use the library:
 
 ```python
 import sys
@@ -131,17 +107,26 @@ from pydantic import SecretStr
 from servicenow_browser_use import BrowserConfig
 from servicenow_browser_use.browser.browser import Browser
 from servicenow_browser_use.browser.context import BrowserContextConfig
-from servicenow_browser_use.browser.streamlined_recorder import StreamlinedRecorder
 import os
 import logging
 import subprocess
-from datetime import datetime
 import time
 import requests
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+def wait_for_chrome_debugger(port=9222, max_retries=10, retry_interval=1):
+    """Wait for Chrome debugger to be available on the specified port."""
+    for i in range(max_retries):
+        try:
+            response = requests.get(f"http://localhost:{port}/json/version")
+            if response.status_code == 200:
+                logger.info("Chrome debugger is available")
+                return True
+        except requests.exceptions.ConnectionError:
+            logger.debug(f"Chrome debugger not available yet (attempt {i+1}/{max_retries})")
+            time.sleep(retry_interval)
+    return False
 
 async def main(task, llm_model):
     # Create output directory if it doesn't exist
@@ -188,14 +173,23 @@ async def main(task, llm_model):
         # Initialize LLM
         llm = AzureChatOpenAI(
             model=llm_model,
-            api_version="2024-10-21",
+            api_version="2024-02-15-preview",
             azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
             api_key=SecretStr(os.getenv("AZURE_OPENAI_KEY", "")),
+            deployment_name="gpt-4",
+            temperature=0.0,
+            model_kwargs={
+                "messages": [{"role": "system", "content": "You are a helpful assistant."}]
+            }
         )
+        
+        # Format task as a string and wrap it in a message format
+        task_str = str(task)
+        task_message = [{"role": "user", "content": task_str}]
         
         # Initialize agent with browser
         agent = Agent(
-            task=task,
+            task=task_message,
             llm=llm,
             browser=browser,
             save_conversation_path="logs/conversation",
@@ -228,10 +222,52 @@ async def main(task, llm_model):
 
 if __name__ == "__main__":
     load_dotenv()
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     task = "login with username: admin, password: admin, click on 'New' button and check if 'Flow' tab is present"
     llm_model = "gpt-4"
     asyncio.run(main(task, llm_model))
+
+### Example Explanation
+
+This example demonstrates how to automate a ServiceNow workflow using AI. Here's what the script does:
+
+1. **Initialization and Setup**
+   - Creates necessary directories for output and logs
+   - Cleans up any existing Chrome instances
+   - Sets up logging configuration
+
+2. **Browser Configuration**
+   - Configures Chrome with specific settings for ServiceNow automation
+   - Enables remote debugging for browser control
+   - Sets up security and performance parameters
+   - Configures window size and network wait times
+
+3. **AI Agent Setup**
+   - Initializes Azure OpenAI with GPT-4
+   - Configures the model with specific parameters
+   - Sets up proper message formatting for the AI agent
+
+4. **Task Execution**
+   - The example task: "login with username: admin, password: admin, click on 'New' button and check if 'Flow' tab is present"
+   - The agent will:
+     - Navigate to the ServiceNow instance
+     - Log in with provided credentials
+     - Click the 'New' button
+     - Verify the presence of the 'Flow' tab
+     - Record all actions for potential Selenium script generation
+
+5. **Cleanup and Error Handling**
+   - Properly closes the browser
+   - Cleans up Chrome processes
+   - Handles and logs any errors that occur
+
+The script demonstrates key features:
+- AI-powered browser automation
+- Natural language task execution
+- Action recording
+- Error handling and logging
+- Browser state management
 
 ## Configuration
 
@@ -244,32 +280,26 @@ SERVICENOW_URL=your_instance_url
 ANONYMIZED_TELEMETRY=false
 ```
 
-## Advanced Usage
+## Features
 
-### Recording Browser Actions
-```python
-from servicenow_browser_use import SeleniumRecorder
+### Browser Automation
+- AI-powered browser control
+- Shadow DOM support
+- Action recording and playback
+- Selenium script generation
 
-recorder = SeleniumRecorder(browser)
-recorder.start_recording()
-# Perform actions
-recording = recorder.stop_recording()
-```
+### Agent Capabilities
+- Natural language task execution
+- Context-aware decision making
+- Automated form filling
+- Element interaction
 
-### Converting Recordings to Selenium
-```python
-from servicenow_browser_use import convert_agent_recording_to_selenium
+### Recording Features
+- Streamlined action recording
+- Selenium code generation
+- Browser state tracking
+- Network activity monitoring
 
-selenium_script = convert_agent_recording_to_selenium("recording.json")
-```
-
-### DOM Manipulation
-```python
-from servicenow_browser_use import DomService
-
-dom = DomService(browser)
-element = dom.find_element("css_selector", "#incident_number")
-```
 
 ## Contributing
 
@@ -279,54 +309,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-# Codebase Structure
-
-> The code structure inspired by https://github.com/Netflix/dispatch.
-
-Very good structure on how to make a scalable codebase is also in [this repo](https://github.com/zhanymkanov/fastapi-best-practices).
-
-Just a brief document about how we should structure our backend codebase.
-
-## Code Structure
-
-```markdown
-src/
-/<service name>/
-models.py
-services.py
-prompts.py
-views.py
-utils.py
-routers.py
-
-    	/_<subservice name>/
-```
-
-### Service.py
-
-Always a single file, except if it becomes too long - more than ~500 lines, split it into \_subservices
-
-### Views.py
-
-Always split the views into two parts
-
-```python
-# All
-...
-
-# Requests
-...
-
-# Responses
-...
-```
-
-If too long → split into multiple files
-
-### Prompts.py
-
-Single file; if too long → split into multiple files (one prompt per file or so)
-
-### Routers.py
-
-Never split into more than one file
