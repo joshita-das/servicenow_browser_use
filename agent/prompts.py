@@ -53,7 +53,7 @@ class SystemPrompt:
      ]
    - Navigation and extraction: [
        {"open_new_tab": {}},
-       {"go_to_url": {"url": "https://example.com"}},
+       {"go_to_url": {"url": """+ SERVICENOW_URL + """}},
        {"extract_page_content": {}}
      ]
    - Custom prompt mapping:Use custom prompt with the following mapping:[

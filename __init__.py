@@ -12,6 +12,7 @@ from servicenow_browser_use.browser.browser import BrowserConfig as BrowserConfi
 from servicenow_browser_use.browser.selenium_recorder import SeleniumRecorder as SeleniumRecorder
 from servicenow_browser_use.controller.service import Controller as Controller
 from servicenow_browser_use.dom.service import DomService as DomService
+from servicenow_browser_use.generate_selenium_from_recording import generate_selenium_code as generate_selenium_from_recording
 
 __all__ = [
 	'Agent',
@@ -24,4 +25,5 @@ __all__ = [
 	'ActionModel',
 	'AgentHistoryList',
 	'SeleniumRecorder',
+	'generate_selenium_from_recording',
 ]

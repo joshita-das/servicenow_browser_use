@@ -5,10 +5,10 @@ from datetime import datetime
 def generate_selenium_code(json_file):
     try:
         with open(json_file, 'r') as f:
-            data = json.load(f)
+            recording = json.load(f)
 
         # Generate Java code
-        java_code = create_selenium_code(data)
+        java_code = create_selenium_code(recording)
         
         # Create output directory if it doesn't exist
         java_output_dir = "output"
@@ -33,7 +33,80 @@ def generate_selenium_code(json_file):
         print(f"Error processing {json_file}: {str(e)}")
         return None
 
-def create_selenium_code(actions):
+def process_action(action_data):
+    """Generate Java code for a single action based on its type and parameters."""
+    action_lines = []
+    
+    action_type = action_data.get("action")
+    element = action_data.get("element", {})
+    
+    if action_type == "type":
+        # Get element details
+        element_id = element.get("id")
+        element_xpath = element.get("xpath")
+        text = action_data.get("text", "")
+        
+        # Choose the best locator strategy
+        if element_id:
+            locator = f'By.id("{element_id}")'
+        elif element_xpath:
+            locator = f'By.xpath("{element_xpath}")'
+        else:
+            return []  # Skip if no good locator found
+        
+        action_lines.extend([
+            f"            // Input text into element",
+            f"            WebElement inputElement = waitForElement({locator});",
+            "            inputElement.clear();",
+            f'            inputElement.sendKeys("{text}");'
+        ])
+    
+    elif action_type == "click":
+        # Get element details
+        element_id = element.get("id")
+        element_xpath = element.get("xpath")
+        element_text = element.get("text")
+        has_shadow_dom = element.get("hasShadowDOM", False)
+        
+        if has_shadow_dom:
+            shadow_elements = element.get("elementsWithShadowDOM", [])
+            shadow_parts = []
+            for e in shadow_elements:
+                tag_name = e.get("tagName", "").lower()
+                element_id = e.get("id", "")
+                if element_id:
+                    shadow_parts.append(f"{tag_name}#{element_id}")
+                else:
+                    shadow_parts.append(tag_name)
+            shadow_path = " >>> ".join(shadow_parts)
+            action_lines.extend([
+                f"            // Click shadow DOM element",
+                f'            WebElement clickElement = findElementWithShadowDOM("{shadow_path}");'
+            ])
+        else:
+            # Choose the best locator strategy
+            if element_id:
+                locator = f'By.id("{element_id}")'
+            elif element_xpath:
+                locator = f'By.xpath("{element_xpath}")'
+            elif element_text:
+                locator = f'By.xpath("//*[contains(text(), \'{element_text}\')]")'
+            else:
+                return []  # Skip if no good locator found
+            
+            action_lines.extend([
+                f"            // Click element",
+                f"            WebElement clickElement = waitForElementClickable({locator});"
+            ])
+        
+        action_lines.extend([
+            "            clickElement.click();",
+            "            waitForPageLoad();"
+        ])
+
+    return action_lines
+
+def create_selenium_code(recording):
     # Generate Java class name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     class_name = f"SeleniumTest_{timestamp}"
@@ -52,14 +125,24 @@ def create_selenium_code(actions):
         "import org.openqa.selenium.JavascriptExecutor;",
         "import java.time.Duration;",
         "import org.testng.annotations.*;",
+        "import java.util.Properties;",
+        "import java.io.FileInputStream;",
+        "import java.io.IOException;",
         "",
         f"public class {class_name} {{",
         "    private static WebDriver driver;",
         "    private static WebDriverWait wait;",
         "    private static JavascriptExecutor js;",
+        "    private static Properties config;",
         "",
         "    @BeforeClass",
-        "    public static void setup() {",
+        "    public static void setup() throws IOException {{",
+        "        // Load configuration from properties file",
+        "        config = new Properties();",
+        "        try (FileInputStream fis = new FileInputStream(\"config.properties\")) {{",
+        "            config.load(fis);",
+        "        }}",
+        "",
         "        // Set up Chrome options",
         "        ChromeOptions options = new ChromeOptions();",
         "        options.addArguments(\"--remote-allow-origins=*\");",
@@ -78,159 +161,68 @@ def create_selenium_code(actions):
         "        // Initialize WebDriverWait and JavascriptExecutor",
         "        wait = new WebDriverWait(driver, Duration.ofSeconds(10));",
         "        js = (JavascriptExecutor) driver;",
-        "    }",
+        "    }}",
         "",
         "    @AfterClass",
-        "    public static void tearDown() {",
-        "        if (driver != null) {",
+        "    public static void tearDown() {{",
+        "        if (driver != null) {{",
         "            driver.quit();",
-        "        }",
-        "    }",
+        "        }}",
+        "    }}",
         "",
-        "    private static WebElement findElementWithShadowDOM(String shadowPath) {",
+        "    private static WebElement findElementWithShadowDOM(String shadowPath) {{",
         "        String[] selectors = shadowPath.split(\" >>> \");",
         "        WebElement element = null;",
         "        ",
-        "        for (String selector : selectors) {",
-        "            if (element == null) {",
+        "        for (String selector : selectors) {{",
+        "            if (element == null) {{",
         "                element = driver.findElement(By.cssSelector(selector));",
-        "            } else {",
+        "            }} else {{",
         "                element = (WebElement) js.executeScript(\"return arguments[0].shadowRoot\", element);",
         "                element = element.findElement(By.cssSelector(selector));",
-        "            }",
-        "        }",
+        "            }}",
+        "        }}",
         "        return element;",
-        "    }",
+        "    }}",
         "",
-        "    private void handleLogin() throws InterruptedException {",
-        "        // Wait for username field and enter credentials",
-        "        WebElement usernameField = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(\"user_name\")));",
-        "        usernameField.clear();",
-        "        usernameField.sendKeys(\"admin\");",
-        "        Thread.sleep(500);",
+        "    private static WebElement waitForElement(By locator) {{",
+        "        return wait.until(ExpectedConditions.presenceOfElementLocated(locator));",
+        "    }}",
         "",
-        "        // Enter password",
-        "        WebElement passwordField = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(\"user_password\")));",
-        "        passwordField.clear();",
-        "        passwordField.sendKeys(\"admin\");",
-        "        Thread.sleep(500);",
+        "    private static WebElement waitForElementClickable(By locator) {{",
+        "        return wait.until(ExpectedConditions.elementToBeClickable(locator));",
+        "    }}",
         "",
-        "        // Click login button",
-        "        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(By.id(\"sysverb_login\")));",
-        "        loginButton.click();",
-        "        Thread.sleep(2000);  // Wait for login to complete",
-        "    }",
+        "    private static void waitForPageLoad() {{",
+        "        wait.until(webDriver -> ((JavascriptExecutor) webDriver).executeScript(\"return document.readyState\").equals(\"complete\"));",
+        "    }}",
         "",
         "    @Test",
-        "    public void runTest() {",
-        "        try {",
-        "            // Navigate to the target website",
-        "            driver.get(\"https://k8s0722360-node1.thunder.devsnc.com/now/workflow-studio/home/process\");",
-        "            Thread.sleep(2000);  // Wait for initial page load",
-        "",
-        "            // Handle login if redirected",
-        "            if (driver.getCurrentUrl().contains(\"login.do\")) {",
-        "                handleLogin();",
-        "            }",
-        "",
-        "            // Wait for page to load after login",
-        "            Thread.sleep(2000);",
-        "",
-        "            // Click on New button",
-        "            WebElement newButton = wait.until(ExpectedConditions.elementToBeClickable(",
-        "                By.cssSelector(\"button[data-testid='new-button']\")))",
-        "            newButton.click();",
-        "            Thread.sleep(1000);",
-        "",
-        "            // Verify Flow tab is present",
-        "            WebElement flowTab = wait.until(ExpectedConditions.presenceOfElementLocated(",
-        "                By.cssSelector(\"div[data-testid='flow-tab']\")))",
-        "            assert flowTab.isDisplayed() : \"Flow tab is not visible\";",
-        "",
+        "    public void testServiceNowAutomation() {{",
+        "        try {{",
+        "            // Navigate to ServiceNow instance",
+        "            String servicenowUrl = config.getProperty(\"servicenow.url\", \"https://your-instance.service-now.com\");",
+        "            driver.get(servicenowUrl);",
+        "            waitForPageLoad();",
+        ""
     ]
 
-    # Add test steps based on actions
-    for action in actions:
-        if action['action'] == 'type':
-            element = action['element']
-            text = action['text']
-            
-            # Skip login-related actions as they're handled in handleLogin()
-            if element.get('id') in ['user_name', 'user_password'] or text in ['admin']:
-                continue
-                
-            # Handle shadow DOM elements
-            if element.get('hasShadowDOM'):
-                shadow_elements = element.get('elementsWithShadowDOM', [])
-                shadow_parts = []
-                for e in shadow_elements:
-                    tag_name = e.get('tagName', '').lower()
-                    element_id = e.get('id', '')
-                    if element_id:
-                        shadow_parts.append(f"{tag_name}#{element_id}")
-                    else:
-                        shadow_parts.append(tag_name)
-                shadow_path = " >>> ".join(shadow_parts)
-                code.append(f"            WebElement inputElement = findElementWithShadowDOM(\"{shadow_path}\");")
-            else:
-                # Use XPath if available, otherwise use ID
-                if element.get('xpath'):
-                    code.append(f"            WebElement inputElement = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(\"{element.get('xpath')}\")));")
-                elif element.get('id'):
-                    code.append(f"            WebElement inputElement = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(\"{element.get('id')}\")));")
-                else:
-                    continue
-                    
-            code.append("            inputElement.clear();")
-            code.append(f"            inputElement.sendKeys(\"{text}\");")
-            code.append("            Thread.sleep(500);")
-            
-        elif action['action'] == 'click':
-            element = action['element']
-            
-            # Skip login-related actions
-            if element.get('id') == 'sysverb_login':
-                continue
-                
-            # Handle shadow DOM elements
-            if element.get('hasShadowDOM'):
-                shadow_elements = element.get('elementsWithShadowDOM', [])
-                shadow_parts = []
-                for e in shadow_elements:
-                    tag_name = e.get('tagName', '').lower()
-                    element_id = e.get('id', '')
-                    if element_id:
-                        shadow_parts.append(f"{tag_name}#{element_id}")
-                    else:
-                        shadow_parts.append(tag_name)
-                shadow_path = " >>> ".join(shadow_parts)
-                code.append(f"            WebElement clickElement = findElementWithShadowDOM(\"{shadow_path}\");")
-            else:
-                # Use XPath if available, otherwise use ID
-                if element.get('xpath'):
-                    code.append(f"            WebElement clickElement = wait.until(ExpectedConditions.elementToBeClickable(By.xpath(\"{element.get('xpath')}\")));")
-                elif element.get('id'):
-                    code.append(f"            WebElement clickElement = wait.until(ExpectedConditions.elementToBeClickable(By.id(\"{element.get('id')}\")));")
-                else:
-                    continue
-                    
-            code.append("            clickElement.click();")
-            code.append("            Thread.sleep(1000);")
+    # Process each action from the recording
+    if isinstance(recording, list):
+        for action_data in recording:
+            action_lines = process_action(action_data)
+            if action_lines:
+                code.extend(action_lines)
+                code.append("")  # Add blank line between actions
 
-    # Add main method with proper error handling
+    # Add closing braces
     code.extend([
-        "        } catch (Exception e) {",
-        "            System.err.println(\"Test failed with error: \" + e.getMessage());",
+        "        }} catch (Exception e) {{",
+        "            System.err.println(\"Error during test execution: \" + e.getMessage());",
         "            e.printStackTrace();",
-        "        } finally {",
-        "            tearDown();",
-        "        }",
-        "    }",
-        "",
-        "    public static void main(String[] args) {",
-        f"        {class_name} test = new {class_name}();",
-        "        test.runTest();",
-        "    }",
+        "            throw e;",
+        "        }}",
+        "    }}",
         "}"
     ])
 
