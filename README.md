@@ -168,6 +168,7 @@ if __name__ == "__main__":
     task = "login with username: admin, password: admin, click on 'New' button and check if 'Flow' tab is present"
     llm_model = "gpt-4"
     asyncio.run(main(task, llm_model))
+```
 
 ### Example Explanation
 
@@ -214,7 +215,8 @@ The script demonstrates key features:
 
 Create a `.env` file in your project root:
 
-```env
+```
+.env
 AZURE_OPENAI_ENDPOINT=your_endpoint
 AZURE_OPENAI_KEY=your_key
 SERVICENOW_URL=your_instance_url
