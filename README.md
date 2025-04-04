@@ -3,34 +3,16 @@
 A Python library for automating ServiceNow browser interactions using AI-powered agents and Selenium.
 
 ## Table of Contents
-- [Features](#features)
 - [Installation](#installation)
-- [Citation](#citation)
-- [Components](#components)
-  - [Agent Module](#agent-module-agent)
-  - [Browser Module](#browser-module-browser)
-  - [Controller Module](#controller-module-controller)
-  - [DOM Module](#dom-module-dom)
-  - [Utils Module](#utils-module-utils)
-  - [Selenium Generator](#selenium-generator)
+- [Inspiration](#inspiration)
 - [Quick Start](#quick-start)
-- [Example Usage](#example-usage)
+- [Example Explanation](#example-explanation)
 - [Configuration](#configuration)
-- [Advanced Usage](#advanced-usage)
-  - [Recording Browser Actions](#recording-browser-actions)
-  - [Converting Recordings to Selenium](#converting-recordings-to-selenium)
-  - [DOM Manipulation](#dom-manipulation)
-- [Contributing](#contributing)
+- [Features](#features)
+  - [Browser Automation](#browser-automation)
+  - [Agent Capabilities](#agent-capabilities)
+  - [Recording Features](#recording-features)
 - [License](#license)
-- [Codebase Structure](#codebase-structure)
-
-## Features
-
-- 🤖 AI-powered browser automation
-- 🔄 Selenium-based browser control
-- 🎯 ServiceNow-specific DOM handling
-- 📝 Action recording and playback
-- 🔍 Telemetry and logging support
 
 ## Installation
 
@@ -51,47 +33,6 @@ This project is inspired by the work of Müller and Žunič in their Browser Use
   url = {https://github.com/browser-use/browser-use}
 }
 ```
-
-## Components
-
-### Agent Module (`agent/`)
-The agent module provides AI-powered automation capabilities:
-- `service.py`: Core agent service implementing AI-driven browser automation
-- `prompts.py`: System prompts and templates for AI interactions
-- `views.py`: Data models for agent actions and responses
-- `message_manager/`: Handles communication between agent and browser
-
-### Browser Module (`browser/`)
-Handles browser automation and recording:
-- `browser.py`: Main browser controller with Selenium integration
-- `context.py`: Browser context management and state tracking
-- `selenium_recorder.py`: Records browser actions for replay
-- `streamlined_recorder.py`: Optimized recording functionality
-- `shadow_dom.py`: Handles shadow DOM elements in ServiceNow
-- `recording_manager.py`: Manages browser action recordings
-
-### Controller Module (`controller/`)
-Coordinates between different components:
-- `service.py`: Main controller service orchestrating automation
-- `registry/`: Component registration and management
-- `views.py`: Controller data models and interfaces
-
-### DOM Module (`dom/`)
-Handles DOM manipulation and analysis:
-- `service.py`: DOM manipulation service
-- `history_tree_processor/`: Processes DOM history
-- `buildDomTree.js`: JavaScript for DOM tree construction
-- `views.py`: DOM-related data models
-
-### Utils Module (`utils/`)
-Common utility functions and helpers:
-- Various helper functions for the entire library
-- Shared functionality across modules
-
-### Selenium Generator
-Converts agent recordings to Selenium scripts:
-- `selenium_generator.py`: Generates Java Selenium scripts from recordings
-- Supports common actions: clicks, inputs, scrolling, keyboard events
 
 ## Quick Start
 
@@ -299,7 +240,6 @@ ANONYMIZED_TELEMETRY=false
 - Selenium code generation
 - Browser state tracking
 - Network activity monitoring
-
 
 ## Contributing
 
