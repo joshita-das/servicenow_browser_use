@@ -216,7 +216,6 @@ The script demonstrates key features:
 Create a `.env` file in your project root:
 
 ```
-.env
 AZURE_OPENAI_ENDPOINT=your_endpoint
 AZURE_OPENAI_KEY=your_key
 SERVICENOW_URL=your_instance_url
